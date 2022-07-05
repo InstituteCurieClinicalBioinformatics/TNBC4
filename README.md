@@ -96,9 +96,13 @@ OUTDIR
 ```
 
 Boxplot overExpressed corresponds to specific over expressed genes for each specific subtypes.
-STATS boxplot expression of STAT family genes (STAT1, STAT2, STAT4, STAT3, STAT5A, STAT5B, STAT6).
+
+STATS boxplot expression of STAT family genes. (STAT1, STAT2, STAT4, STAT3, STAT5A, STAT5B, STAT6)
+
 SOX boxplot expression of SOX family genes (SOX1, SOX2, SOX3, SOX4, SOX5, SOX6, SOX7, SOX8, SOX9, SOX10, SOX11, SOX12, SOX13, SOX14, SOX15, SOX17, SOX18, SOX21, SOX30).
+
 MES_specific boxplot expression of OGN, ADIPOQ, PLIN1, IGF1.
+
 LAR_specific boxplot expression of ESR1, PGR, FOXA1, FOXA2, FOXA3, GATA3.
 
 The file ${DATASET}_paval.csv contains gene expression comparison between four clusters. Each cluster is compared to the other ones.
