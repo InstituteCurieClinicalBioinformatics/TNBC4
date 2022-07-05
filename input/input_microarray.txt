@@ -1,0 +1,9 @@
+/home/kmerchadou/Git/affymetrix/GSE114269/ARN/CEL/GSM3136792_BC04_ARN0060_s1h1s1_U133p2.CEL	Medullaire	GSM3136792	affy_hg_u133_plus_2
+/home/kmerchadou/Git/affymetrix/GSE114269/ARN/CEL/BC16_ARN0055_s1h1s1_U133p2.CEL	Servier	BC16	affy_hg_u133_plus_2
+/home/kmerchadou/Git/affymetrix/GSE114269/ARN/CEL/BC04_ARN0069_s1h1s1_U133p2.CEL	Servier	BC04	affy_hg_u133_plus_2
+/home/kmerchadou/Git/affymetrix/GSE114269/ARN/CEL/GSM3136770_BC16_ARN0090_s1h1s1_U133p2.CEL	Medullaire	GSM3136770	affy_hg_u133_plus_2
+/home/kmerchadou/Git/affymetrix/GSE114269/ARN/Xeno/MM14_ARN0143_s1h1_G05_hGene.CEL	Xeno	ARN0143	affy_hugene_1_0_st_v1
+/home/kmerchadou/Git/affymetrix/GSE114269/ARN/Xeno/MM14_ARN0014_s1h1_F07_hGene.CEL	Xeno	ARN0014	affy_hugene_1_0_st_v1
+/home/kmerchadou/Git/affymetrix/GSE114269/ARN/CEL/BC04_ARN0049_s1h1s1_U133p2.CEL	Medullaire	ARN0049	affy_hg_u133_plus_2
+/home/kmerchadou/Git/affymetrix/GSE114269/ARN/CEL/GSM3136796_BC04_ARN0069_s1h1s1_U133p2.CEL	Medullaire	ARN0069	affy_hg_u133_plus_2
+

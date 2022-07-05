@@ -1,0 +1,15 @@
+oligo
+ggplot2
+ggpubr
+FactoMineR
+factoextra
+dplyr
+gridExtra
+grid
+biomaRt
+optparse
+hash
+affy
+limma
+clusterProfiler
+org.Hs.eg.db
