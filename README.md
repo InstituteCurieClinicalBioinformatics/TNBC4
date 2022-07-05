@@ -46,19 +46,14 @@ Fourth column must contain microarray platform experiment. Must be one of the fo
 
 | affy_hc_g110 | affy_hg_focus | affy_hg_u133a |
 | :----------: | :-----------: | :-----------: |
-| Seconds | 301 | 283 |
+| affy_hg_u133a_2 | affy_hg_u133a_2 | affy_hg_u133b |
+| affy_hg_u133_plus_2 | affy_hg_u95a | affy_hg_u95av2 |
+| affy_hg_u95b | affy_hg_u95c | affy_hg_u95d |
+| affy_hg_u95e | affy_hta_2_0 | affy_ht_hg_u133_plus_pm |
+| affy_huex_1_0_st_v2 | affy_hugenefl | affy_hugene_1_0_st_v1 |
+| affy_hugene_2_0_st_v1 | affy_hugene_2_1_st_v1 | affy_primeview |
+| affy_u133_x3p |  |  |
 
-"affy_hc_g110"            "affy_hg_focus"          
-"affy_hg_u133a"           "affy_hg_u133a_2"        
-"affy_hg_u133b"           "affy_hg_u133_plus_2"    
-"affy_hg_u95a"            "affy_hg_u95av2"         
-"affy_hg_u95b"            "affy_hg_u95c"           
-"affy_hg_u95d"            "affy_hg_u95e"           
-"affy_hta_2_0"            "affy_ht_hg_u133_plus_pm"
-"affy_huex_1_0_st_v2"     "affy_hugenefl"          
-"affy_hugene_1_0_st_v1"   "affy_hugene_2_0_st_v1"  
-"affy_hugene_2_1_st_v1"   "affy_primeview"         
-"affy_u133_x3p"
 
 For an example of microarray input file, take a look at input_microarray.txt.
 
