@@ -105,7 +105,7 @@ MES_specific boxplot expression of OGN, ADIPOQ, PLIN1, IGF1.
 
 LAR_specific boxplot expression of ESR1, PGR, FOXA1, FOXA2, FOXA3, GATA3.
 
-The file ${DATASET}_paval.csv contains gene expression comparison between four clusters. Each cluster is compared to the other ones.
+The file ${DATASET}_pval.csv contains gene expression comparison between four clusters. Each cluster is compared to the other ones.
 
 Gathering informations leads to assign one of the four subtypes to each cluster.
 
