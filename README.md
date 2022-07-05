@@ -44,6 +44,10 @@ Second column must contain cohorte name of the corresponding CEL file.
 Third column must contain sample ID.
 Fourth column must contain microarray platform experiment. Must be one of the following :
 
+| affy_hc_g110 | affy_hg_focus | affy_hg_u133a |
+| :----------: | :-----------: | :-----------: |
+| Seconds | 301 | 283 |
+
 "affy_hc_g110"            "affy_hg_focus"          
 "affy_hg_u133a"           "affy_hg_u133a_2"        
 "affy_hg_u133b"           "affy_hg_u133_plus_2"    
