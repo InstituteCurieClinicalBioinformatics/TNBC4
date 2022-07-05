@@ -45,6 +45,7 @@ Third column must contain sample ID.
 Fourth column must contain microarray platform experiment. Must be one of the following :
 
 | affy_hc_g110 | affy_hg_focus | affy_hg_u133a |
+| :----------: | :-----------: | :-----------: |
 | affy_hg_u133a_2 | affy_hg_u133a_2 | affy_hg_u133b |
 | affy_hg_u133_plus_2 | affy_hg_u95a | affy_hg_u95av2 |
 | affy_hg_u95b | affy_hg_u95c | affy_hg_u95d |
