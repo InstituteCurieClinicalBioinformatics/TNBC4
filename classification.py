@@ -1,15 +1,15 @@
 from argparse import ArgumentParser
 import subprocess
-from affy import *
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), "scripts"))
+from geneExpressionComparison import *
 
 def main(inFile, outDir, mode, dataset, split, threshold, gitDir):
-    code = subprocess.call(f"Rscript {gitDir}/scripts/clustering.r -i {inFile} -o {outDir} -m {mode} -s {split}", shell=True)
+    code = subprocess.call(f"Rscript {gitDir}/scripts/clustering.R -i {inFile} -o {outDir} -m {mode} -s {split}", shell=True)
     if code == 0:
         computeTestStats(os.path.join(outDir, "final_clusters.csv"), dataset, outDir)
-        subprocess.call(f"Rscript {gitDir}/scripts/pathways.R -i {os.path.join(outDir, f'{dataset}_WithPval.csv')} -o {outDir} -t {threshold}", shell=True)
+        subprocess.call(f"Rscript {gitDir}/scripts/pathways.R -i {os.path.join(outDir, f'{dataset}_pval.csv')} -o {outDir}/ -t {threshold}", shell=True)
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="-Launch affymetrix analysis")

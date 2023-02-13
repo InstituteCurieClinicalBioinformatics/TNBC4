@@ -5,11 +5,11 @@ library(org.Hs.eg.db)
 library(ggpubr)
 library(optparse)
 
-pathwayEnrichment <- function(entrezID, cluster, type, outDir){
+pathwayEnrichment <- function(entrezID, cluster, outDir){
     pathways <- enrichGO(entrezID, 'org.Hs.eg.db', pvalueCutoff=1, qvalueCutoff=1)
     pathways = setReadable(pathways, 'org.Hs.eg.db')
-    d = dotplot(pathways) + ggtitle(paste("Cluster ", cluster, " (", type, ")", sep=""))
-    ggarrange(d, ncol=1) %>% ggexport(filename = paste(outDir, "Cluster", cluster, "_", type, ".jpg", sep=""), width = 2000, height = 1500, res = 200)
+    d = dotplot(pathways) + ggtitle(paste("Cluster ", cluster, sep=""))
+    ggarrange(d, ncol=1) %>% ggexport(filename = paste(outDir, "/Cluster", cluster, ".jpg", sep=""), width = 2000, height = 1500, res = 200)
 }
 
 getEntrezID <- function(symbols){
@@ -22,9 +22,9 @@ getProcess <- function(processes, splitProcesses){
     return(splitProcesses)
 }
 
-getPathwayForOne <- function(data, group, type, outDir){
+getPathwayForOne <- function(data, group, outDir){
     entrezIDs = getEntrezID(rownames(data))$ENTREZID
-    pathwayEnrichment(entrezIDs, group, type, outDir)
+    pathwayEnrichment(entrezIDs, group, outDir)
 }
 
 main <- function(inFile, outDir, threshold){
@@ -37,16 +37,17 @@ main <- function(inFile, outDir, threshold){
         if (dim(scaledData[scaledData[columnsPval[i]] < threshold, ])[1] == 0){
             message(paste("No significant differential expression observed for group ", i, " (pval threshold = ", threshold, ")", sep=""))
         }else{
-            getPathwayForOne(scaledData[scaledData[columnsPval[i]] < threshold, ], i, "Pval", outDir)
+            getPathwayForOne(scaledData[scaledData[columnsPval[i]] < threshold, ], i, outDir)
         }
     }
 }
 
 option_list = list(
+
 make_option(c("-i", "--inFile"), type="character", help="Final file with pvalue"),
 make_option(c("-o", "--outDir"), type="character", help="Output folder"),
 make_option(c("-t", "--threshold"), type="double", help="Pvalue cutoff", default=0.05));
- 
+
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 

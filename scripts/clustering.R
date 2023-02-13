@@ -11,6 +11,7 @@ library(optparse)
 library(hash)
 library(affy)
 library(limma)
+library(stringr)
 
 formateForGGplot <- function(samples, graph){
     sampleNames = c()
@@ -41,7 +42,6 @@ splitDF <- function(df, factor, samples){
     dfWithoutDup = list()
     len = round(length(symbolWithoutDup) / factor)
     for (i in 1:factor){
-        print(i)
         start = len*(i-1)
         if (((length(symbolWithoutDup) %% factor) != 0) & (i == factor)){
             end = length(symbolWithoutDup)
@@ -154,21 +154,19 @@ computeQC <- function(data, outDir, cohorteName, files){
 
 preProcessing <- function(data, chipAnnotation, nbSplit){
     samplesID = rownames(data@phenoData)
-    counter = 0
     data.rma = oligo::rma(data)
-    data.matrix = exprs(data.rma)[1:10,]
+    data.matrix = exprs(data.rma)#[1:10,]
     ensembl = useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", mirror = "useast")
     message("Retrieving annotation")
-    data.annotation = lapply(rownames(data.matrix), function(x){
-    counter <<- counter +1;
-    if ((counter/length(rownames(data.matrix)) * 100) %in% seq(0, 100, 10)){
-        message(paste(counter/length(rownames(data.matrix)) * 100, "% has been processed"))}
-    getBM(mart=ensembl, attributes=c(chipAnnotation, "hgnc_symbol"), filter=chipAnnotation, values=x)[1,]})
-    data.annotation = do.call("rbind", data.annotation)
+    data.annotation = getBM(attributes = c(chipAnnotation, "hgnc_symbol"), mart = ensembl)
+    data.annotation = data.annotation[data.annotation[, 1] != "", ] #remove line with no chip annotation
+    data.annotation = data.annotation[data.annotation[, 2] != "", ] #remove line with no hgnc symbol
     colnames(data.annotation) = c("ID", "Gene.symbol")
+
     ###Add annotation
     df = as.data.frame(data.matrix)
     df$ID = rownames(df)
+    df$ID = str_split_fixed(df$ID, "\\.1", 2)[,1]
     data.annotated = merge(df, data.annotation, by=c("ID"))
     finalData = dplyr::select(data.annotated, samplesID)
     finalData$Gene.symbol = data.annotated$Gene.symbol
@@ -203,6 +201,7 @@ rmvBatchEffect <- function(dfList, refFile){
 clustering <- function(data, burstein, outDir){
     dataBurstein = subset(data, rownames(data) %in% burstein)
     message("Kmeans computing ...")
+    print("Burstein")
     res.km = findBestKmeans(dataBurstein, 4, 10000)
     clusters = fviz_cluster(res.km, data = t(dataBurstein),geom = c("point","text"),ellipse.type = "convex", ggtheme = theme_bw()) + ggtitle(paste("Cluster Burstein", dim(dataBurstein)[1], sep=" "))
     print(clusters)
@@ -251,12 +250,12 @@ expressionPlot <- function(data, otherGenes, outDir, res.km){
         ggarrange(soxPlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "SOX.jpg"), width=668, height=800, res = 120)
     }
 
-    adipoPlot = meanBoxplot(data, osteoAdipo, "Osteocytes and adipocytes specific genes", samples, res.km)
+    adipoPlot = meanBoxplot(data, osteoAdipo, "Osteocytes and adipocytes specific genes", samplesID, res.km)
     if (!(is.null(adipoPlot))){
         ggarrange(adipoPlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "MES_specific.jpg"), width=668, height=662, res = 120)
     }
 
-    estrogenPlot = meanBoxplot(data, estrogenRegulated, "Estrogen regulated genes", samples, res.km)
+    estrogenPlot = meanBoxplot(data, estrogenRegulated, "Estrogen regulated genes", samplesID, res.km)
     if (!(is.null(estrogenPlot))){
         ggarrange(estrogenPlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "LAR_specific.jpg"), width=668, height=662, res = 120)
     }
@@ -308,7 +307,7 @@ main <- function(inputFile, outDir, mode, nbSplit){
             scaledData = cleanedData[[1]]
         }
     }else{
-        scaledData = read.table(inputFile, sep="\t", row.names=TRUE, header=TRUE)
+        scaledData = read.table(inputFile, sep="\t", row.names=1, header=TRUE)
     }
     burstein <- c('DHRS2', 'GABRP', 'AGR2', 'PIP', 'FOXA1', 'PROM1', 'TFF1', 'NAT1', 'BCL11A', 'ESR1', 'FOXC1', 'CA12', 'TFF3', 'SCUBE2', 'SFRP1', 'ERBB4','SIDT1', 'PSAT1', 'CHI3L1', 'AR', 'CD36', 'OGN', 'ABCA2', 'CFD', 'IGF1', 'HBB', 'CDH1', 'MEOX2', 'GPX3', 'SCARA5', 'PDK4', 'ENPP2', 'AGTR1', 'LEP', 'LPL', 'DPT', 'TIMP4', 'FHL1', 'SRPX', 'EDNRB', 'SERPINB5', 'SOX10', 'IRX1', 'MIA', 'DSC2', 'TTYH1', 'COL9A3', 'FGL2', 'PLAAT4', 'PDE9A', 'BST2', 'PTGER4', 'KCNK5', 'PSMB9', 'HLA.DMA', 'EPHB3', 'IGSF6', 'ST3GAL6', 'RHOH', 'SGPP1','CXCL9', 'CXCL11', 'GBP5', 'GZMB', 'LAMP3', 'GBP1', 'ADAMDEC1', 'CCL5', 'SPON1', 'PBK', 'STAT1', 'EZH2', 'PLAT', 'TAP2', 'SLAMF7', 'HERC5', 'SPOCK1', 'TAP1', 'CD2', 'AIM2')
 
