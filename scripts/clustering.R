@@ -280,7 +280,11 @@ expressionPlot <- function(data, otherGenes, outDir, res.km){
     write.csv(data, file.path(outDir, "final_clusters.csv"))
 }
 
-main <- function(inputFile, outDir, mode, nbSplit){
+main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
+    genesLAR = read.table(paste(genesListFolder, "LAR.txt", sep = ""), header = F)[,1]
+    genesIM = read.table(paste(genesListFolder, "IM.txt", sep	= ""), header =	F)[,1]
+    genesBLIS = read.table(paste(genesListFolder, "BLIS.txt", sep = ""), header = F)[,1]
+    genesMES = read.table(paste(genesListFolder, "MES.txt", sep	= ""), header =	F)[,1]
     if (mode == "microarray"){
         h = hash()
         cleanedData = list()
@@ -320,6 +324,7 @@ main <- function(inputFile, outDir, mode, nbSplit){
 }
 
 option_list = list(
+make_option(c("-g", "--geneFilesFolder"), type="character", help="Folder containing genes list files"),
 make_option(c("-i", "--inFile"), type="character", help="File containing cel path, cohorte name, sample ID and chip type"),
 make_option(c("-m", "--mode"), type="character", help="Data type to cluster. Must be rnaseq or microarray"),
 make_option(c("-o", "--outDir"), type="character", help="Output folder"),
@@ -328,4 +333,4 @@ make_option(c("-s", "--split"), type="double", help="Number of data split to per
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-main(opt$inFile, opt$outDir, opt$mode, opt$split)
+main(opt$inFile, opt$outDir, opt$mode, opt$split, opt$geneFilesFolder)
