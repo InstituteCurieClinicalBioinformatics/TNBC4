@@ -12,6 +12,7 @@ library(hash)
 library(affy)
 library(limma)
 library(stringr)
+library(rstatix)
 
 formateForGGplot <- function(samples, graph){
     sampleNames = c()
@@ -126,6 +127,51 @@ meanBoxplot <- function(data, genes, group, samplesID, km){
     }
 }
 
+subtypeBoxplot <- function(outDir, data){
+    finalSubtype = c()
+    samples = unique(data$Sample)
+    for (sample in samples){
+        subDf = subset(data, Sample == sample)
+        my_comparisons = list(c("BLIS","LAR"), c("BLIS","MES"), c("BLIS","IM"), c("LAR","MES"), c("LAR","IM"), c("MES","IM"))
+        p = compare_means(Expression ~ Subtype, subDf, method = "kruskal.test", paired=FALSE)
+        if (p$p.adj < 0.05){
+            genePlot <- ggboxplot(subDf, x = "Subtype", y = "Expression", add = "jitter", palette = "jco", color = "Subtype", main = sample)+ stat_compare_means(label.y = round(max(subDf$Expression)) + 1) + stat_compare_means(label = "p.signif", comparisons = my_comparisons, hide.ns = TRUE) + rremove("legend")
+            finalSubtype = c(finalSubtype, attributeSubtype(subDf, TRUE))
+        }
+        else{
+            genePlot <- ggboxplot(subDf, x = "Subtype", y = "Expression", add = "jitter", palette = "jco", color = "Subtype", main = sample)+ stat_compare_means(label.y = round(max(subDf$Expression)) + 1) + rremove("legend")
+            finalSubtype = c(finalSubtype, attributeSubtype(subDf, FALSE))
+        }
+        file = file.path(outDir, "Boxplot", paste(sample, ".jpg", sep = ""))
+        ggarrange(genePlot, ncol=1) %>% ggexport(filename = file, width=668, height=800, res = 120)
+    }
+    finalTable = data.frame("Sample" = samples, "Subtype" = finalSubtype)
+    write.table(finalTable, file = file.path(outDir, "conclusion.tsv"), sep = "\t", col.names = TRUE, row.names = FALSE)
+}
+
+attributeSubtype <- function(subDf, significative){
+    subtype = c("LAR", "IM", "BLIS", "MES")
+    medianLAR = median(subset(subDf, Subtype == "LAR")$Expression)
+    medianIM = median(subset(subDf, Subtype == "IM")$Expression)
+    medianBLIS = median(subset(subDf, Subtype == "BLIS")$Expression)
+    medianMES = median(subset(subDf, Subtype == "MES")$Expression)
+    higherSubtype = subtype[which.max(c(medianLAR, medianIM, medianBLIS, medianMES))]
+    if (significative){
+        comparaisons = as.data.frame(tukey_hsd(subDf, Expression ~ Subtype))
+        comparaisons$groupes = paste(comparaisons$group1, comparaisons$group2, sep = "_")
+        comparaisons = subset(comparaisons, grepl(higherSubtype, groupes))
+        if (length(comparaisons$p.adj[comparaisons$p.adj < 0.05]) == 3){
+            return(higherSubtype)
+        }
+        else{
+            return(paste(higherSubtype, "(nas)"))
+        }
+    }
+    else{
+        return(paste(higherSubtype, "(ns)"))
+    }
+}
+
 getData <- function(files, samplesID){
     data = oligo::read.celfiles(files)
     colnames(data) = samplesID
@@ -198,8 +244,9 @@ rmvBatchEffect <- function(dfList, refFile){
     return(scaledData)
 }
 
-clustering <- function(data, burstein, outDir){
-    dataBurstein = subset(data, rownames(data) %in% burstein)
+clustering <- function(data, genes, outDir){
+    dataBurstein = subset(data, rownames(data) %in% genes)
+    print(dim(dataBurstein))
     message("Kmeans computing ...")
     print("Burstein")
     res.km = findBestKmeans(dataBurstein, 4, 10000)
@@ -211,15 +258,19 @@ clustering <- function(data, burstein, outDir){
     return(res.km)
 }
 
-expressionPlot <- function(data, otherGenes, outDir, res.km){
+expressionPlot <- function(data, genes, outDir, res.km){
     dir.create(file.path(outDir, "Boxplot"), showWarnings = FALSE)
 
     samplesID = colnames(data)
 
-    ovLAR = otherGenes[1:15]
-    ovMES = otherGenes[16:30]
-    ovBLIS = otherGenes[31:41]
-    ovBLIA = otherGenes[42:length(otherGenes)]
+    # ovLAR = genes[1:15]
+    # ovMES = genes[16:30]
+    # ovBLIS = genes[31:41]
+    # ovBLIA = genes[42:length(genes)]
+    ovLAR = subset(genes, Subtype == "LAR")$Gene
+    ovIM = subset(genes, Subtype == "IM")$Gene
+    ovBLIS = subset(genes, Subtype == "BLIS")$Gene
+    ovMES = subset(genes, Subtype == "MES")$Gene
     STATS = c("STAT1", "STAT6", "STAT2", "STAT4", "STAT3", "STAT5A", "STAT5B")
     SOX = c("SOX8","SOX18","SOX1","SOX15","SOX5","SOX21","SOX11","SOX14","SOX6","SOX7","SOX1","SOX2","SOX10","SOX12","SOX2","SOX3","SOX4","SOX9","SOX17","SOX13","SOX30")
     osteoAdipo = c("OGN", "ADIPOQ", "PLIN1", "IGF1")
@@ -280,11 +331,44 @@ expressionPlot <- function(data, otherGenes, outDir, res.km){
     write.csv(data, file.path(outDir, "final_clusters.csv"))
 }
 
+formateData <- function(genesListFolder, df){
+    types = c("LAR", "IM", "BLIS", "MES")
+    finalSubtype = data.frame()
+    for (type in types){
+        genes = read.table(paste(genesListFolder, type, ".txt", sep = ""), header = FALSE)
+        genes$type = rep(type, dim(genes)[1])
+        finalSubtype = rbind(finalSubtype, genes)
+    }
+    colnames(finalSubtype) = c("Gene", "Subtype")
+
+    df = subset(df, rownames(df) %in% finalSubtype$Gene)
+
+    finalExpression = data.frame()
+    for (value in rownames(df)){
+        tmp = as.data.frame(t(df[value, ]))
+        tmp$Gene = rep(value, dim(tmp)[1])
+        tmp$Sample = rownames(tmp)
+        colnames(tmp) = c("Expression", "Gene", "Sample")
+        finalExpression = rbind(finalExpression, tmp)
+    }
+
+    return(merge(finalSubtype, finalExpression, by = c("Gene"))[, -1])
+}
+
+clusteringGenes <- function(genesListFolder){
+    types = c("LAR", "IM", "BLIS", "MES")
+    finalSubtype = data.frame()
+    for (type in types){
+        genes = read.table(paste(genesListFolder, type, ".txt", sep = ""), header = FALSE)
+        genes$type = rep(type, dim(genes)[1])
+        finalSubtype = rbind(finalSubtype, genes)
+    }
+    colnames(finalSubtype) = c("Gene", "Subtype")
+    return(finalSubtype)
+}
+
 main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
-    genesLAR = read.table(paste(genesListFolder, "LAR.txt", sep = ""), header = F)[,1]
-    genesIM = read.table(paste(genesListFolder, "IM.txt", sep	= ""), header =	F)[,1]
-    genesBLIS = read.table(paste(genesListFolder, "BLIS.txt", sep = ""), header = F)[,1]
-    genesMES = read.table(paste(genesListFolder, "MES.txt", sep	= ""), header =	F)[,1]
+    genes = clusteringGenes(genesListFolder)
     if (mode == "microarray"){
         h = hash()
         cleanedData = list()
@@ -311,15 +395,20 @@ main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
             scaledData = cleanedData[[1]]
         }
     }else{
-        scaledData = read.table(inputFile, sep="\t", row.names=1, header=TRUE)
+        scaledData = read.table(inputFile, sep="\t", row.names=1, header=TRUE, check.names = FALSE)
     }
-    burstein <- c('DHRS2', 'GABRP', 'AGR2', 'PIP', 'FOXA1', 'PROM1', 'TFF1', 'NAT1', 'BCL11A', 'ESR1', 'FOXC1', 'CA12', 'TFF3', 'SCUBE2', 'SFRP1', 'ERBB4','SIDT1', 'PSAT1', 'CHI3L1', 'AR', 'CD36', 'OGN', 'ABCA2', 'CFD', 'IGF1', 'HBB', 'CDH1', 'MEOX2', 'GPX3', 'SCARA5', 'PDK4', 'ENPP2', 'AGTR1', 'LEP', 'LPL', 'DPT', 'TIMP4', 'FHL1', 'SRPX', 'EDNRB', 'SERPINB5', 'SOX10', 'IRX1', 'MIA', 'DSC2', 'TTYH1', 'COL9A3', 'FGL2', 'PLAAT4', 'PDE9A', 'BST2', 'PTGER4', 'KCNK5', 'PSMB9', 'HLA.DMA', 'EPHB3', 'IGSF6', 'ST3GAL6', 'RHOH', 'SGPP1','CXCL9', 'CXCL11', 'GBP5', 'GZMB', 'LAMP3', 'GBP1', 'ADAMDEC1', 'CCL5', 'SPON1', 'PBK', 'STAT1', 'EZH2', 'PLAT', 'TAP2', 'SLAMF7', 'HERC5', 'SPOCK1', 'TAP1', 'CD2', 'AIM2')
+    # data = formateData(genesListFolder, scaledData)
+    # subtypeBoxplot(outDir, data)
 
-    otherGenes <- c("DHRS2","PIP","AGR2","FOXA1","ESR1","ERBB4","CA12","AR","TOX3","KRT18","MUC1","PGR","ERBB3","RET","ITGB5", "ADH1B", "ADIPOQ","OGN","FABP4","CD36","NTRK2","EDNRB","GHR","ADRA2A","PLA2G2A","PPARG","ADRB2","PTGER3","IL1R1","TEK", "ELF5","HORMAD1","SOX10","SERPINB5","FOXC1","SOX8","TUBB2B","VTCN1","SOX6","KIT","FGFR2", "CXCL9", "IDO1","CXCL11","RARRES1","GBP5","CXCL10","CXCL13","LAMP3","STAT1","PSMB9","CD2","CTLA4","TOP2A","LCK")
+    # burstein <- c('DHRS2', 'GABRP', 'AGR2', 'PIP', 'FOXA1', 'PROM1', 'TFF1', 'NAT1', 'BCL11A', 'ESR1', 'FOXC1', 'CA12', 'TFF3', 'SCUBE2', 'SFRP1', 'ERBB4','SIDT1', 'PSAT1', 'CHI3L1', 'AR', 'CD36', 'OGN', 'ABCA2', 'CFD', 'IGF1', 'HBB', 'CDH1', 'MEOX2', 'GPX3', 'SCARA5', 'PDK4', 'ENPP2', 'AGTR1', 'LEP', 'LPL', 'DPT', 'TIMP4', 'FHL1', 'SRPX', 'EDNRB', 'SERPINB5', 'SOX10', 'IRX1', 'MIA', 'DSC2', 'TTYH1', 'COL9A3', 'FGL2', 'PLAAT4', 'PDE9A', 'BST2', 'PTGER4', 'KCNK5', 'PSMB9', 'HLA.DMA', 'EPHB3', 'IGSF6', 'ST3GAL6', 'RHOH', 'SGPP1','CXCL9', 'CXCL11', 'GBP5', 'GZMB', 'LAMP3', 'GBP1', 'ADAMDEC1', 'CCL5', 'SPON1', 'PBK', 'STAT1', 'EZH2', 'PLAT', 'TAP2', 'SLAMF7', 'HERC5', 'SPOCK1', 'TAP1', 'CD2', 'AIM2')
 
-    res.km = clustering(scaledData, burstein, outDir)
+    # otherGenes <- c("DHRS2","PIP","AGR2","FOXA1","ESR1","ERBB4","CA12","AR","TOX3","KRT18","MUC1","PGR","ERBB3","RET","ITGB5", "ADH1B", "ADIPOQ","OGN","FABP4","CD36","NTRK2","EDNRB","GHR","ADRA2A","PLA2G2A","PPARG","ADRB2","PTGER3","IL1R1","TEK", "ELF5","HORMAD1","SOX10","SERPINB5","FOXC1","SOX8","TUBB2B","VTCN1","SOX6","KIT","FGFR2", "CXCL9", "IDO1","CXCL11","RARRES1","GBP5","CXCL10","CXCL13","LAMP3","STAT1","PSMB9","CD2","CTLA4","TOP2A","LCK")
 
-    expressionPlot(scaledData, otherGenes, outDir, res.km)    
+    res.km = clustering(scaledData, genes$Gene, outDir)
+    # res.km = clustering(scaledData, burstein, outDir)
+    expressionPlot(sacaledData, genes, outDir, res.km)
+
+    # expressionPlot(scaledData, otherGenes, outDir, res.km)    
 
 }
 
