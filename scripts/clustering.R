@@ -279,7 +279,7 @@ expressionPlot <- function(data, genes, outDir, res.km){
     larPlot = meanBoxplot(data, ovLAR, "LAR", samplesID, res.km)
     mesPlot = meanBoxplot(data, ovMES, "MES", samplesID, res.km)
     blisPlot = meanBoxplot(data, ovBLIS, "BLIS", samplesID, res.km)
-    imPlot = meanBoxplot(data, ovBLIA, "IM", samplesID, res.km)
+    imPlot = meanBoxplot(data, ovIM, "IM", samplesID, res.km)
     if (!((is.null(larPlot)) & (is.null(mesPlot)) & (is.null(blisPlot)) & (is.null(imPlot)))){
         ggarrange(larPlot, mesPlot, blisPlot, imPlot, ncol=2, nrow=2) %>% ggexport(filename = file.path(outDir, "Boxplot", "overExpressed.jpg"), width=800, height=900, res = 120)
     }
@@ -406,7 +406,7 @@ main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
 
     res.km = clustering(scaledData, genes$Gene, outDir)
     # res.km = clustering(scaledData, burstein, outDir)
-    expressionPlot(sacaledData, genes, outDir, res.km)
+    expressionPlot(scaledData, genes, outDir, res.km)
 
     # expressionPlot(scaledData, otherGenes, outDir, res.km)    
 
