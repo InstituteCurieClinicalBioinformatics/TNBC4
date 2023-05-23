@@ -7,9 +7,9 @@ from geneExpressionComparison import *
 
 def main(inFile, outDir, mode, dataset, split, threshold, genesListFolder, gitDir):
     code = subprocess.call(f"Rscript {gitDir}/scripts/clustering.R -i {inFile} -g {genesListFolder}/ -o {outDir} -m {mode} -s {split}", shell=True)
-    # if code == 0:
-        # computeTestStats(os.path.join(outDir, "final_clusters.csv"), dataset, outDir)
-        # subprocess.call(f"Rscript {gitDir}/scripts/pathways.R -i {os.path.join(outDir, f'{dataset}_pval.csv')} -o {outDir}/ -t {threshold}", shell=True)
+    if code == 0:
+        computeTestStats(os.path.join(outDir, "final_clusters.csv"), dataset, outDir)
+        subprocess.call(f"Rscript {gitDir}/scripts/pathways.R -i {os.path.join(outDir, f'{dataset}_pval.csv')} -o {outDir}/ -t {threshold}", shell=True)
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="-Launch affymetrix analysis")

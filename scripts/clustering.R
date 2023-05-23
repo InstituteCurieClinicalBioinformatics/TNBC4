@@ -118,10 +118,10 @@ meanBoxplot <- function(data, genes, group, samplesID, km){
         my_comparisons = list(c(1,2), c(1,3), c(1,4), c(2,3), c(2,4), c(3,4))
         p = compare_means(Intensity ~ cluster, geneVal, method = "kruskal.test", paired=FALSE)
         if (p$p.adj < 0.05){
-            genePlot <- ggboxplot(geneVal, x = "cluster", y = "Intensity", add = "jitter", palette = "jco", color = "cluster", main = group)+ stat_compare_means(label.y = round(max(geneVal$Intensity)) + 1) + stat_compare_means(label = "p.signif", comparisons = my_comparisons, hide.ns = TRUE) + rremove("legend")
+            genePlot <- ggboxplot(geneVal, x = "cluster", y = "Intensity", add = "jitter", palette = "jco", color = "cluster", main = group)+ stat_compare_means(label.y = round(max(geneVal$Intensity)) + 5) + stat_compare_means(label = "p.signif", comparisons = my_comparisons, hide.ns = TRUE) + rremove("legend")
         }
         else{
-            genePlot <- ggboxplot(geneVal, x = "cluster", y = "Intensity", add = "jitter", palette = "jco", color = "cluster", main = group)+ stat_compare_means(label.y = round(max(geneVal$Intensity)) + 1) + rremove("legend")
+            genePlot <- ggboxplot(geneVal, x = "cluster", y = "Intensity", add = "jitter", palette = "jco", color = "cluster", main = group)+ stat_compare_means(label.y = round(max(geneVal$Intensity)) + 5) + rremove("legend")
         }
         return(genePlot)
     }
@@ -240,12 +240,12 @@ rmvBatchEffect <- function(dfList, refFile){
     }
     keepCohorte = keepCohorte[order(keepCohorte$V3),]
     scaledData = removeBatchEffect(data, batch = keepCohorte$V2)
-    # scaledData = as.data.frame(t(scaledData))
     return(scaledData)
 }
 
 clustering <- function(data, genes, outDir){
-    dataBurstein = subset(data, rownames(data) %in% genes)
+    bursteinGenes = c('DHRS2', 'GABRP', 'AGR2', 'PIP', 'FOXA1', 'PROM1', 'TFF1', 'NAT1', 'BCL11A', 'ESR1', 'FOXC1', 'CA12', 'TFF3', 'SCUBE2', 'SFRP1', 'ERBB4','SIDT1', 'PSAT1', 'CHI3L1', 'AR', 'CD36', 'OGN', 'ABCA2', 'CFD', 'IGF1', 'HBB', 'CDH1', 'MEOX2', 'GPX3', 'SCARA5', 'PDK4', 'ENPP2', 'AGTR1', 'LEP', 'LPL', 'DPT', 'TIMP4', 'FHL1', 'SRPX', 'EDNRB', 'SERPINB5', 'SOX10', 'IRX1', 'MIA', 'DSC2', 'TTYH1', 'COL9A3', 'FGL2', 'PLAAT4', 'PDE9A', 'BST2', 'PTGER4', 'KCNK5', 'PSMB9', 'HLA.DMA', 'EPHB3', 'IGSF6', 'ST3GAL6', 'RHOH', 'SGPP1','CXCL9', 'CXCL11', 'GBP5', 'GZMB', 'LAMP3', 'GBP1', 'ADAMDEC1', 'CCL5', 'SPON1', 'PBK', 'STAT1', 'EZH2', 'PLAT', 'TAP2', 'SLAMF7', 'HERC5', 'SPOCK1', 'TAP1', 'CD2', 'AIM2')
+    dataBurstein = subset(data, rownames(data) %in% bursteinGenes)
     print(dim(dataBurstein))
     message("Kmeans computing ...")
     print("Burstein")
@@ -263,10 +263,6 @@ expressionPlot <- function(data, genes, outDir, res.km){
 
     samplesID = colnames(data)
 
-    # ovLAR = genes[1:15]
-    # ovMES = genes[16:30]
-    # ovBLIS = genes[31:41]
-    # ovBLIA = genes[42:length(genes)]
     ovLAR = subset(genes, Subtype == "LAR")$Gene
     ovIM = subset(genes, Subtype == "IM")$Gene
     ovBLIS = subset(genes, Subtype == "BLIS")$Gene
@@ -397,19 +393,9 @@ main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
     }else{
         scaledData = read.table(inputFile, sep="\t", row.names=1, header=TRUE, check.names = FALSE)
     }
-    # data = formateData(genesListFolder, scaledData)
-    # subtypeBoxplot(outDir, data)
-
-    # burstein <- c('DHRS2', 'GABRP', 'AGR2', 'PIP', 'FOXA1', 'PROM1', 'TFF1', 'NAT1', 'BCL11A', 'ESR1', 'FOXC1', 'CA12', 'TFF3', 'SCUBE2', 'SFRP1', 'ERBB4','SIDT1', 'PSAT1', 'CHI3L1', 'AR', 'CD36', 'OGN', 'ABCA2', 'CFD', 'IGF1', 'HBB', 'CDH1', 'MEOX2', 'GPX3', 'SCARA5', 'PDK4', 'ENPP2', 'AGTR1', 'LEP', 'LPL', 'DPT', 'TIMP4', 'FHL1', 'SRPX', 'EDNRB', 'SERPINB5', 'SOX10', 'IRX1', 'MIA', 'DSC2', 'TTYH1', 'COL9A3', 'FGL2', 'PLAAT4', 'PDE9A', 'BST2', 'PTGER4', 'KCNK5', 'PSMB9', 'HLA.DMA', 'EPHB3', 'IGSF6', 'ST3GAL6', 'RHOH', 'SGPP1','CXCL9', 'CXCL11', 'GBP5', 'GZMB', 'LAMP3', 'GBP1', 'ADAMDEC1', 'CCL5', 'SPON1', 'PBK', 'STAT1', 'EZH2', 'PLAT', 'TAP2', 'SLAMF7', 'HERC5', 'SPOCK1', 'TAP1', 'CD2', 'AIM2')
-
-    # otherGenes <- c("DHRS2","PIP","AGR2","FOXA1","ESR1","ERBB4","CA12","AR","TOX3","KRT18","MUC1","PGR","ERBB3","RET","ITGB5", "ADH1B", "ADIPOQ","OGN","FABP4","CD36","NTRK2","EDNRB","GHR","ADRA2A","PLA2G2A","PPARG","ADRB2","PTGER3","IL1R1","TEK", "ELF5","HORMAD1","SOX10","SERPINB5","FOXC1","SOX8","TUBB2B","VTCN1","SOX6","KIT","FGFR2", "CXCL9", "IDO1","CXCL11","RARRES1","GBP5","CXCL10","CXCL13","LAMP3","STAT1","PSMB9","CD2","CTLA4","TOP2A","LCK")
-
     res.km = clustering(scaledData, genes$Gene, outDir)
-    # res.km = clustering(scaledData, burstein, outDir)
+
     expressionPlot(scaledData, genes, outDir, res.km)
-
-    # expressionPlot(scaledData, otherGenes, outDir, res.km)    
-
 }
 
 option_list = list(
