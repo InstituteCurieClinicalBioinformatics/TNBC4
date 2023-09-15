@@ -244,7 +244,7 @@ rmvBatchEffect <- function(dfList, refFile){
 }
 
 clustering <- function(data, genes, outDir){
-    bursteinGenes = c('DHRS2', 'GABRP', 'AGR2', 'PIP', 'FOXA1', 'PROM1', 'TFF1', 'NAT1', 'BCL11A', 'ESR1', 'FOXC1', 'CA12', 'TFF3', 'SCUBE2', 'SFRP1', 'ERBB4','SIDT1', 'PSAT1', 'CHI3L1', 'AR', 'CD36', 'OGN', 'ABCA2', 'CFD', 'IGF1', 'HBB', 'CDH1', 'MEOX2', 'GPX3', 'SCARA5', 'PDK4', 'ENPP2', 'AGTR1', 'LEP', 'LPL', 'DPT', 'TIMP4', 'FHL1', 'SRPX', 'EDNRB', 'SERPINB5', 'SOX10', 'IRX1', 'MIA', 'DSC2', 'TTYH1', 'COL9A3', 'FGL2', 'PLAAT4', 'PDE9A', 'BST2', 'PTGER4', 'KCNK5', 'PSMB9', 'HLA.DMA', 'EPHB3', 'IGSF6', 'ST3GAL6', 'RHOH', 'SGPP1','CXCL9', 'CXCL11', 'GBP5', 'GZMB', 'LAMP3', 'GBP1', 'ADAMDEC1', 'CCL5', 'SPON1', 'PBK', 'STAT1', 'EZH2', 'PLAT', 'TAP2', 'SLAMF7', 'HERC5', 'SPOCK1', 'TAP1', 'CD2', 'AIM2')
+    bursteinGenes = c('DHRS2', 'GABRP', 'AGR2', 'PIP', 'FOXA1', 'PROM1', 'NAT1', 'BCL11A', 'ESR1', 'FOXC1', 'CA12', 'TFF3', 'TFF1', 'SCUBE2', 'SFRP1', 'ERBB4','SIDT1', 'PSAT1', 'CHI3L1', 'AR', 'CD36', 'OGN', 'ABCA2', 'CFD', 'IGF1', 'HBB', 'CDH1', 'MEOX2', 'GPX3', 'SCARA5', 'PDK4', 'ENPP2', 'AGTR1', 'LEP', 'LPL', 'DPT', 'TIMP4', 'FHL1', 'SRPX', 'EDNRB', 'SERPINB5', 'SOX10', 'IRX1', 'MIA', 'DSC2', 'TTYH1', 'COL9A3', 'FGL2', 'RARRES3', 'PDE9A', 'BST2', 'PTGER4', 'KCNK5', 'PSMB9', 'HLA-DMA', 'EPHB3', 'IGSF6', 'ST3GAL6', 'RHOH', 'SGPP1','CXCL9', 'CXCL11', 'GBP5', 'GZMB', 'LAMP3', 'GBP1', 'ADAMDEC1', 'CCL5', 'SPON1', 'PBK', 'STAT1', 'EZH2', 'PLAT', 'TAP2', 'SLAMF7', 'HERC5', 'SPOCK1', 'TAP1', 'CD2', 'AIM2')
     dataBurstein = subset(data, rownames(data) %in% bursteinGenes)
     print(dim(dataBurstein))
     message("Kmeans computing ...")
