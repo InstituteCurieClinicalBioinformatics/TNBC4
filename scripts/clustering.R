@@ -186,7 +186,7 @@ preProcessing <- function(data, chipAnnotation, nbSplit){
     samplesID = rownames(data@phenoData)
     data.rma = oligo::rma(data)
     data.matrix = exprs(data.rma)#[1:10,]
-    ensembl = useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", mirror = "useast")
+    ensembl = useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
     message("Retrieving annotation")
     data.annotation = getBM(attributes = c(chipAnnotation, "hgnc_symbol"), mart = ensembl)
     data.annotation = data.annotation[data.annotation[, 1] != "", ] #remove line with no chip annotation
@@ -350,53 +350,51 @@ clusteringGenes <- function(genesListFolder){
     return(finalSubtype)
 }
 
-main <- function(scaledData, genes, outDir, res.km){
-# main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
-    # genes = clusteringGenes(genesListFolder)
-    # if (mode == "microarray"){
-    #     h = hash()
-    #     cleanedData = list()
-    #     data = read.table(inputFile, sep="\t")
-    #     cohortes = unique(data$V2)
-    #     for (cohorte in cohortes){
-    #         cohorteData = subset(data, V2 == cohorte)
-    #         chipTypes = unique(cohorteData$V4)
-    #         for (chipType in chipTypes){
-    #             chipData = subset(cohorteData, V4 == chipType)
-    #             h[[paste(cohorte, chipType, sep="|")]] = list(data=getData(chipData$V1, chipData$V3), files=chipData$V1)
-    #         }
-    #     }
+main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
+    genes = clusteringGenes(genesListFolder)
+    if (mode == "microarray"){
+        h = hash()
+        cleanedData = list()
+        data = read.table(inputFile, sep="\t")
+        cohortes = unique(data$V2)
+        for (cohorte in cohortes){
+            cohorteData = subset(data, V2 == cohorte)
+            chipTypes = unique(cohorteData$V4)
+            for (chipType in chipTypes){
+                chipData = subset(cohorteData, V4 == chipType)
+                h[[paste(cohorte, chipType, sep="|")]] = list(data=getData(chipData$V1, chipData$V3), files=chipData$V1)
+            }
+        }
 
-    #     for (key in keys(h)){
-    #         chipType = unlist(strsplit(key, "\\|"))[2]
-    #         computeQC(h[[key]]$data, outDir, key, h[[key]]$files)
-    #         cleanedData = append(cleanedData, list(preProcessing(h[[key]]$data, chipType, nbSplit)))
-    #     }
+        for (key in keys(h)){
+            chipType = unlist(strsplit(key, "\\|"))[2]
+            computeQC(h[[key]]$data, outDir, key, h[[key]]$files)
+            cleanedData = append(cleanedData, list(preProcessing(h[[key]]$data, chipType, nbSplit)))
+        }
 
-    #     if (length(unique(data$V2)) > 1 ){
-    #         scaledData = rmvBatchEffect(cleanedData, data)
-    #     }else{
-    #         scaledData = cleanedData[[1]]
-    #     }
-    # }else{
-    #     scaledData = read.table(inputFile, sep="\t", row.names=1, header=TRUE, check.names = FALSE)
-    # }
-    # res.km = clustering(scaledData, genes$Gene, outDir)
+        if (length(unique(data$V2)) > 1 ){
+            scaledData = rmvBatchEffect(cleanedData, data)
+        }else{
+            scaledData = cleanedData[[1]]
+        }
+    }else{
+        scaledData = read.table(inputFile, sep="\t", row.names=1, header=TRUE, check.names = FALSE)
+    }
+    res.km = clustering(scaledData, genes$Gene, outDir)
 
     expressionPlot(scaledData, genes, outDir, res.km)
 }
 
-load("/home/kevin/TNBC/test.Rdata")
 main(scaledData, genes, "/home/kevin/TNBC", res.km)
 
-# option_list = list(
-# make_option(c("-g", "--geneFilesFolder"), type="character", help="Folder containing genes list files"),
-# make_option(c("-i", "--inFile"), type="character", help="File containing cel path, cohorte name, sample ID and chip type"),
-# make_option(c("-m", "--mode"), type="character", help="Data type to cluster. Must be rnaseq or microarray"),
-# make_option(c("-o", "--outDir"), type="character", help="Output folder"),
-# make_option(c("-s", "--split"), type="double", help="Number of data split to perform for crossing gene name with probes name. Depending on specs machine, do not perform split can lead to out of memory exception", default=200));
+option_list = list(
+make_option(c("-g", "--geneFilesFolder"), type="character", help="Folder containing genes list files"),
+make_option(c("-i", "--inFile"), type="character", help="File containing cel path, cohorte name, sample ID and chip type"),
+make_option(c("-m", "--mode"), type="character", help="Data type to cluster. Must be rnaseq or microarray"),
+make_option(c("-o", "--outDir"), type="character", help="Output folder"),
+make_option(c("-s", "--split"), type="double", help="Number of data split to perform for crossing gene name with probes name. Depending on specs machine, do not perform split can lead to out of memory exception", default=200));
  
-# opt_parser = OptionParser(option_list=option_list);
-# opt = parse_args(opt_parser);
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
 
-# main(opt$inFile, opt$outDir, opt$mode, opt$split, opt$geneFilesFolder)
+main(opt$inFile, opt$outDir, opt$mode, opt$split, opt$geneFilesFolder)
