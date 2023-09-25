@@ -24,6 +24,16 @@ def addCorrection(dataset, clusterisedData, cluster):
     clusterisedData["{}_VS_ALL".format(cluster)] = pval
     return clusterisedData
 
+def annotClusters(clusterisedData, conclusions, outFile):
+    clusterisedData["conclusion"] = clusterisedData["cluster"]
+    conclusions = pd.read_csv(conclusions, sep = ",", index_col=0)
+    conclusion = conclusion["conclusion"].str.split("=", expand = True)
+    conclusion = dict(zip(conclusion[1], conclusion[0]))
+    for subtype in conclusion.keys():
+        if conclusion[conclusion["conclusion"] == subtype].shape[0] == 1:
+            clusterisedData["conclusion"] = clusterisedData["conclusion"].replace(subtype, conclusion[subtype])
+    clusterisedData.to_csv(outFile, sep = ",")
+
 def computeTestStats(inFile, dataset, outDir):
     df = pd.read_csv(inFile, delimiter=",", index_col = 0)
     clusters = df.pop("cluster").tolist()

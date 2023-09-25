@@ -1,4 +1,3 @@
-library(oligo)
 library(ggplot2)
 library(ggpubr)
 library(FactoMineR)
@@ -7,8 +6,6 @@ library(dplyr)
 library(gridExtra)
 require(grid)
 library(biomaRt)
-library(optparse)
-library(hash)
 library(affy)
 library(limma)
 library(stringr)
@@ -105,7 +102,7 @@ toRemove <- function(sampleIDs){
     return(remove)
 }
 
-meanBoxplot <- function(data, genes, group, samplesID, km){
+meanBoxplot <- function(data, genes, group, samplesID, km, conclusion){
     subGroup = subset(data, rownames(data) %in% genes)
     if (dim(subGroup)[1] == 0){
         message(paste("Can't boxplot info for ", group, " genes\nGenes are not available in data.", sep=""))
@@ -117,58 +114,45 @@ meanBoxplot <- function(data, genes, group, samplesID, km){
         geneVal$cluster = km$cluster
         my_comparisons = list(c(1,2), c(1,3), c(1,4), c(2,3), c(2,4), c(3,4))
         p = compare_means(Intensity ~ cluster, geneVal, method = "kruskal.test", paired=FALSE)
+        if (group %in% c("IM", "LAR", "MES", "BLIS")){
+            conclusion = c(conclusion, attributeSubtype(geneVal, p$p.adj<0.05, group))
+        }
         if (p$p.adj < 0.05){
             genePlot <- ggboxplot(geneVal, x = "cluster", y = "Intensity", add = "jitter", palette = "jco", color = "cluster", main = group)+ stat_compare_means(label.y = round(max(geneVal$Intensity)) + 5) + stat_compare_means(label = "p.signif", comparisons = my_comparisons, hide.ns = TRUE) + rremove("legend")
         }
         else{
             genePlot <- ggboxplot(geneVal, x = "cluster", y = "Intensity", add = "jitter", palette = "jco", color = "cluster", main = group)+ stat_compare_means(label.y = round(max(geneVal$Intensity)) + 5) + rremove("legend")
         }
-        return(genePlot)
+        return(list("genePlot" = genePlot, "conclusion" = conclusion))
     }
 }
 
-subtypeBoxplot <- function(outDir, data){
-    finalSubtype = c()
-    samples = unique(data$Sample)
-    for (sample in samples){
-        subDf = subset(data, Sample == sample)
-        my_comparisons = list(c("BLIS","LAR"), c("BLIS","MES"), c("BLIS","IM"), c("LAR","MES"), c("LAR","IM"), c("MES","IM"))
-        p = compare_means(Expression ~ Subtype, subDf, method = "kruskal.test", paired=FALSE)
-        if (p$p.adj < 0.05){
-            genePlot <- ggboxplot(subDf, x = "Subtype", y = "Expression", add = "jitter", palette = "jco", color = "Subtype", main = sample)+ stat_compare_means(label.y = round(max(subDf$Expression)) + 1) + stat_compare_means(label = "p.signif", comparisons = my_comparisons, hide.ns = TRUE) + rremove("legend")
-            finalSubtype = c(finalSubtype, attributeSubtype(subDf, TRUE))
-        }
-        else{
-            genePlot <- ggboxplot(subDf, x = "Subtype", y = "Expression", add = "jitter", palette = "jco", color = "Subtype", main = sample)+ stat_compare_means(label.y = round(max(subDf$Expression)) + 1) + rremove("legend")
-            finalSubtype = c(finalSubtype, attributeSubtype(subDf, FALSE))
-        }
-        file = file.path(outDir, "Boxplot", paste(sample, ".jpg", sep = ""))
-        ggarrange(genePlot, ncol=1) %>% ggexport(filename = file, width=668, height=800, res = 120)
-    }
-    finalTable = data.frame("Sample" = samples, "Subtype" = finalSubtype)
-    write.table(finalTable, file = file.path(outDir, "conclusion.tsv"), sep = "\t", col.names = TRUE, row.names = FALSE)
-}
-
-attributeSubtype <- function(subDf, significative){
-    subtype = c("LAR", "IM", "BLIS", "MES")
-    medianLAR = median(subset(subDf, Subtype == "LAR")$Expression)
-    medianIM = median(subset(subDf, Subtype == "IM")$Expression)
-    medianBLIS = median(subset(subDf, Subtype == "BLIS")$Expression)
-    medianMES = median(subset(subDf, Subtype == "MES")$Expression)
-    higherSubtype = subtype[which.max(c(medianLAR, medianIM, medianBLIS, medianMES))]
+attributeSubtype <- function(geneVal, significative, subtype){
+    geneVal$cluster = as.factor(geneVal$cluster)
+    medianCluster1 = median(subset(geneVal, cluster == 1)$Intensity)
+    medianCluster2 = median(subset(geneVal, cluster == 2)$Intensity)
+    medianCluster3 = median(subset(geneVal, cluster == 3)$Intensity)
+    medianCluster4 = median(subset(geneVal, cluster == 4)$Intensity)
+    higherCluster = which.max(c(medianCluster1, medianCluster2, medianCluster3, medianCluster4))
+    comparaisons = as.data.frame(tukey_hsd(geneVal, Intensity ~ cluster))
+    comparaisons$groupes = paste(comparaisons$group1, comparaisons$group2, sep = "_")
+    comparaisons = subset(comparaisons, grepl(higherCluster, groupes))
     if (significative){
-        comparaisons = as.data.frame(tukey_hsd(subDf, Expression ~ Subtype))
+        comparaisons = as.data.frame(tukey_hsd(geneVal, Intensity ~ cluster))
         comparaisons$groupes = paste(comparaisons$group1, comparaisons$group2, sep = "_")
-        comparaisons = subset(comparaisons, grepl(higherSubtype, groupes))
+        comparaisons = subset(comparaisons, grepl(higherCluster, groupes))
         if (length(comparaisons$p.adj[comparaisons$p.adj < 0.05]) == 3){
-            return(higherSubtype)
+            return(paste(higherCluster, "=", subtype, sep = ""))
+        }
+        else if (length(comparaisons$p.adj[comparaisons$p.adj < 0.05]) == 0){
+            return(paste(higherCluster, "=", subtype, "(ns)", sep = ""))
         }
         else{
-            return(paste(higherSubtype, "(nas)"))
+            return(paste(higherCluster, "=", subtype, "(nas)", sep = ""))
         }
     }
     else{
-        return(paste(higherSubtype, "(ns)"))
+        return(paste(higherCluster, "=", subtype, "(ns)", sep = ""))
     }
 }
 
@@ -246,12 +230,9 @@ rmvBatchEffect <- function(dfList, refFile){
 clustering <- function(data, genes, outDir){
     bursteinGenes = c('DHRS2', 'GABRP', 'AGR2', 'PIP', 'FOXA1', 'PROM1', 'NAT1', 'BCL11A', 'ESR1', 'FOXC1', 'CA12', 'TFF3', 'TFF1', 'SCUBE2', 'SFRP1', 'ERBB4','SIDT1', 'PSAT1', 'CHI3L1', 'AR', 'CD36', 'OGN', 'ABCA2', 'CFD', 'IGF1', 'HBB', 'CDH1', 'MEOX2', 'GPX3', 'SCARA5', 'PDK4', 'ENPP2', 'AGTR1', 'LEP', 'LPL', 'DPT', 'TIMP4', 'FHL1', 'SRPX', 'EDNRB', 'SERPINB5', 'SOX10', 'IRX1', 'MIA', 'DSC2', 'TTYH1', 'COL9A3', 'FGL2', 'RARRES3', 'PDE9A', 'BST2', 'PTGER4', 'KCNK5', 'PSMB9', 'HLA-DMA', 'EPHB3', 'IGSF6', 'ST3GAL6', 'RHOH', 'SGPP1','CXCL9', 'CXCL11', 'GBP5', 'GZMB', 'LAMP3', 'GBP1', 'ADAMDEC1', 'CCL5', 'SPON1', 'PBK', 'STAT1', 'EZH2', 'PLAT', 'TAP2', 'SLAMF7', 'HERC5', 'SPOCK1', 'TAP1', 'CD2', 'AIM2')
     dataBurstein = subset(data, rownames(data) %in% bursteinGenes)
-    print(dim(dataBurstein))
     message("Kmeans computing ...")
-    print("Burstein")
     res.km = findBestKmeans(dataBurstein, 4, 10000)
     clusters = fviz_cluster(res.km, data = t(dataBurstein),geom = c("point","text"),ellipse.type = "convex", ggtheme = theme_bw()) + ggtitle(paste("Cluster Burstein", dim(dataBurstein)[1], sep=" "))
-    print(clusters)
     dir.create(file.path(outDir, "Clustering"), showWarnings = FALSE)
     QCdir = file.path(outDir, "Clustering")
     ggsave(file.path(outDir, "Clustering", "burstein.jpg"), device="jpeg")
@@ -259,6 +240,7 @@ clustering <- function(data, genes, outDir){
 }
 
 expressionPlot <- function(data, genes, outDir, res.km){
+    conclusion = c()
     dir.create(file.path(outDir, "Boxplot"), showWarnings = FALSE)
 
     samplesID = colnames(data)
@@ -272,59 +254,64 @@ expressionPlot <- function(data, genes, outDir, res.km){
     osteoAdipo = c("OGN", "ADIPOQ", "PLIN1", "IGF1")
     estrogenRegulated = c("ESR1", "PGR", "FOXA1", "FOXA2", "FOXA3", "GATA3")
 
-    larPlot = meanBoxplot(data, ovLAR, "LAR", samplesID, res.km)
-    mesPlot = meanBoxplot(data, ovMES, "MES", samplesID, res.km)
-    blisPlot = meanBoxplot(data, ovBLIS, "BLIS", samplesID, res.km)
-    imPlot = meanBoxplot(data, ovIM, "IM", samplesID, res.km)
-    if (!((is.null(larPlot)) & (is.null(mesPlot)) & (is.null(blisPlot)) & (is.null(imPlot)))){
-        ggarrange(larPlot, mesPlot, blisPlot, imPlot, ncol=2, nrow=2) %>% ggexport(filename = file.path(outDir, "Boxplot", "overExpressed.jpg"), width=800, height=900, res = 120)
+    larPlot = meanBoxplot(data, ovLAR, "LAR", samplesID, res.km, conclusion)
+    mesPlot = meanBoxplot(data, ovMES, "MES", samplesID, res.km, conclusion)
+    blisPlot = meanBoxplot(data, ovBLIS, "BLIS", samplesID, res.km, conclusion)
+    imPlot = meanBoxplot(data, ovIM, "IM", samplesID, res.km, conclusion)
+
+    if (!((is.null(larPlot$genePlot)) & (is.null(mesPlot$genePlot)) & (is.null(blisPlot$genePlot)) & (is.null(imPlot$genePlot)))){
+        ggarrange(larPlot$genePlot, mesPlot$genePlot, blisPlot$genePlot, imPlot$genePlot, ncol=2, nrow=2) %>% ggexport(filename = file.path(outDir, "Boxplot", "overExpressed.jpg"), width=800, height=900, res = 120)
     }
 
-    IL6plot = meanBoxplot(data, "IL6", "IL6", samplesID, res.km)
-    JAK1plot = meanBoxplot(data, "JAK1", "JAK1", samplesID, res.km)
-    STAT3plot = meanBoxplot(data, "STAT3", "STAT3", samplesID, res.km)
-    if (!((is.null(IL6plot)) & (is.null(JAK1plot)) & (is.null(STAT3plot)))){
-        ggarrange(IL6plot, JAK1plot, STAT3plot, ncol=3) %>% ggexport(filename = file.path(outDir, "Boxplot", "IL6_JAK1_STAT3.jpg"), width=1250, height=660, res = 120)
+    IL6plot = meanBoxplot(data, "IL6", "IL6", samplesID, res.km, conclusion)
+    JAK1plot = meanBoxplot(data, "JAK1", "JAK1", samplesID, res.km, conclusion)
+    STAT3plot = meanBoxplot(data, "STAT3", "STAT3", samplesID, res.km, conclusion)
+    if (!((is.null(IL6plot$genePlot)) & (is.null(JAK1plot$genePlot)) & (is.null(STAT3plot$genePlot)))){
+        ggarrange(IL6plot$genePlot, JAK1plot$genePlot, STAT3plot$genePlot, ncol=3) %>% ggexport(filename = file.path(outDir, "Boxplot", "IL6_JAK1_STAT3.jpg"), width=1250, height=660, res = 120)
     }
 
-    statsPlot = meanBoxplot(data, STATS, "STAT genes", samplesID, res.km)
-    if (!(is.null(statsPlot))){
-        ggarrange(statsPlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "STATS.jpg"), width=668, height=662, res = 120)
+    statsPlot = meanBoxplot(data, STATS, "STAT genes", samplesID, res.km, conclusion)
+    if (!(is.null(statsPlot$genePlot))){
+        ggarrange(statsPlot$genePlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "STATS.jpg"), width=668, height=662, res = 120)
     }
 
-    soxPlot = meanBoxplot(data, SOX, "SOX genes", samplesID, res.km)
-    if (!(is.null(soxPlot))){
-        ggarrange(soxPlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "SOX.jpg"), width=668, height=800, res = 120)
+    soxPlot = meanBoxplot(data, SOX, "SOX genes", samplesID, res.km, conclusion)
+    if (!(is.null(soxPlot$genePlot))){
+        ggarrange(soxPlot$genePlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "SOX.jpg"), width=668, height=800, res = 120)
     }
 
-    adipoPlot = meanBoxplot(data, osteoAdipo, "Osteocytes and adipocytes specific genes", samplesID, res.km)
-    if (!(is.null(adipoPlot))){
-        ggarrange(adipoPlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "MES_specific.jpg"), width=668, height=662, res = 120)
+    adipoPlot = meanBoxplot(data, osteoAdipo, "Osteocytes and adipocytes specific genes", samplesID, res.km, conclusion)
+    if (!(is.null(adipoPlot$genePlot))){
+        ggarrange(adipoPlot$genePlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "MES_specific.jpg"), width=668, height=662, res = 120)
     }
 
-    estrogenPlot = meanBoxplot(data, estrogenRegulated, "Estrogen regulated genes", samplesID, res.km)
-    if (!(is.null(estrogenPlot))){
-        ggarrange(estrogenPlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "LAR_specific.jpg"), width=668, height=662, res = 120)
+    estrogenPlot = meanBoxplot(data, estrogenRegulated, "Estrogen regulated genes", samplesID, res.km, conclusion)
+    if (!(is.null(estrogenPlot$genePlot))){
+        ggarrange(estrogenPlot$genePlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "LAR_specific.jpg"), width=668, height=662, res = 120)
     }
 
-    FOXC1plot = meanBoxplot(data, c("FOXC1"), "FOXC1", samplesID, res.km)
-    if (!(is.null(FOXC1plot))){
-        ggarrange(FOXC1plot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "FOXC1.jpg"), width=668, height=662, res = 120)
+    FOXC1plot = meanBoxplot(data, c("FOXC1"), "FOXC1", samplesID, res.km, conclusion)
+    if (!(is.null(FOXC1plot$genePlot))){
+        ggarrange(FOXC1plot$genePlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "FOXC1.jpg"), width=668, height=662, res = 120)
     }
 
-    ARplot = meanBoxplot(data, c("AR"), "AR", samplesID, res.km)
-    if (!(is.null(ARplot))){
-        ggarrange(ARplot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "AR.jpg"), width=668, height=662, res = 120)
+    ARplot = meanBoxplot(data, c("AR"), "AR", samplesID, res.km, conclusion)
+    if (!(is.null(ARplot$genePlot))){
+        ggarrange(ARplot$genePlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "AR.jpg"), width=668, height=662, res = 120)
     }
 
-    MKIplot = meanBoxplot(data, c("MIB1"), "MKI67", samplesID, res.km)
-    if (!(is.null(MKIplot))){
-        ggarrange(MKIplot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "MKI67.jpg"), width=668, height=662, res = 120)
+    MKIplot = meanBoxplot(data, c("MIB1"), "MKI67", samplesID, res.km, conclusion)
+    if (!(is.null(MKIplot$genePlot))){
+        ggarrange(MKIplot$genePlot, ncol=1) %>% ggexport(filename = file.path(outDir, "Boxplot", "MKI67.jpg"), width=668, height=662, res = 120)
     }
 
     data = as.data.frame(t(data))
     data$cluster = res.km$cluster
     write.csv(data, file.path(outDir, "final_clusters.csv"))
+
+    conclusions = as.data.frame(c(imPlot$conclusion, larPlot$conclusion, blisPlot$conclusion, mesPlot$conclusion))
+    colnames(conclusions) = "conclusion"
+    write.csv(conclusions, file.path(outDir, "conclusion.csv"))
 }
 
 formateData <- function(genesListFolder, df){
@@ -363,49 +350,53 @@ clusteringGenes <- function(genesListFolder){
     return(finalSubtype)
 }
 
-main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
-    genes = clusteringGenes(genesListFolder)
-    if (mode == "microarray"){
-        h = hash()
-        cleanedData = list()
-        data = read.table(inputFile, sep="\t")
-        cohortes = unique(data$V2)
-        for (cohorte in cohortes){
-            cohorteData = subset(data, V2 == cohorte)
-            chipTypes = unique(cohorteData$V4)
-            for (chipType in chipTypes){
-                chipData = subset(cohorteData, V4 == chipType)
-                h[[paste(cohorte, chipType, sep="|")]] = list(data=getData(chipData$V1, chipData$V3), files=chipData$V1)
-            }
-        }
+main <- function(scaledData, genes, outDir, res.km){
+# main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
+    # genes = clusteringGenes(genesListFolder)
+    # if (mode == "microarray"){
+    #     h = hash()
+    #     cleanedData = list()
+    #     data = read.table(inputFile, sep="\t")
+    #     cohortes = unique(data$V2)
+    #     for (cohorte in cohortes){
+    #         cohorteData = subset(data, V2 == cohorte)
+    #         chipTypes = unique(cohorteData$V4)
+    #         for (chipType in chipTypes){
+    #             chipData = subset(cohorteData, V4 == chipType)
+    #             h[[paste(cohorte, chipType, sep="|")]] = list(data=getData(chipData$V1, chipData$V3), files=chipData$V1)
+    #         }
+    #     }
 
-        for (key in keys(h)){
-            chipType = unlist(strsplit(key, "\\|"))[2]
-            computeQC(h[[key]]$data, outDir, key, h[[key]]$files)
-            cleanedData = append(cleanedData, list(preProcessing(h[[key]]$data, chipType, nbSplit)))
-        }
+    #     for (key in keys(h)){
+    #         chipType = unlist(strsplit(key, "\\|"))[2]
+    #         computeQC(h[[key]]$data, outDir, key, h[[key]]$files)
+    #         cleanedData = append(cleanedData, list(preProcessing(h[[key]]$data, chipType, nbSplit)))
+    #     }
 
-        if (length(unique(data$V2)) > 1 ){
-            scaledData = rmvBatchEffect(cleanedData, data)
-        }else{
-            scaledData = cleanedData[[1]]
-        }
-    }else{
-        scaledData = read.table(inputFile, sep="\t", row.names=1, header=TRUE, check.names = FALSE)
-    }
-    res.km = clustering(scaledData, genes$Gene, outDir)
+    #     if (length(unique(data$V2)) > 1 ){
+    #         scaledData = rmvBatchEffect(cleanedData, data)
+    #     }else{
+    #         scaledData = cleanedData[[1]]
+    #     }
+    # }else{
+    #     scaledData = read.table(inputFile, sep="\t", row.names=1, header=TRUE, check.names = FALSE)
+    # }
+    # res.km = clustering(scaledData, genes$Gene, outDir)
 
     expressionPlot(scaledData, genes, outDir, res.km)
 }
 
-option_list = list(
-make_option(c("-g", "--geneFilesFolder"), type="character", help="Folder containing genes list files"),
-make_option(c("-i", "--inFile"), type="character", help="File containing cel path, cohorte name, sample ID and chip type"),
-make_option(c("-m", "--mode"), type="character", help="Data type to cluster. Must be rnaseq or microarray"),
-make_option(c("-o", "--outDir"), type="character", help="Output folder"),
-make_option(c("-s", "--split"), type="double", help="Number of data split to perform for crossing gene name with probes name. Depending on specs machine, do not perform split can lead to out of memory exception", default=200));
- 
-opt_parser = OptionParser(option_list=option_list);
-opt = parse_args(opt_parser);
+load("/home/kevin/TNBC/test.Rdata")
+main(scaledData, genes, "/home/kevin/TNBC", res.km)
 
-main(opt$inFile, opt$outDir, opt$mode, opt$split, opt$geneFilesFolder)
+# option_list = list(
+# make_option(c("-g", "--geneFilesFolder"), type="character", help="Folder containing genes list files"),
+# make_option(c("-i", "--inFile"), type="character", help="File containing cel path, cohorte name, sample ID and chip type"),
+# make_option(c("-m", "--mode"), type="character", help="Data type to cluster. Must be rnaseq or microarray"),
+# make_option(c("-o", "--outDir"), type="character", help="Output folder"),
+# make_option(c("-s", "--split"), type="double", help="Number of data split to perform for crossing gene name with probes name. Depending on specs machine, do not perform split can lead to out of memory exception", default=200));
+ 
+# opt_parser = OptionParser(option_list=option_list);
+# opt = parse_args(opt_parser);
+
+# main(opt$inFile, opt$outDir, opt$mode, opt$split, opt$geneFilesFolder)
