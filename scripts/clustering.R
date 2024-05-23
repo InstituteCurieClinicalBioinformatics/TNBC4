@@ -11,6 +11,7 @@ library(limma)
 library(stringr)
 library(rstatix)
 library(optparse)
+library(hash)
 
 formateForGGplot <- function(samples, graph){
     sampleNames = c()
@@ -352,6 +353,8 @@ clusteringGenes <- function(genesListFolder){
 }
 
 main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
+    dir.create(file.path(outDir, "CACHE"), showWarnings = FALSE)
+    Sys.setenv(BIOMART_CACHE=file.path(outDir, "CACHE"))
     genes = clusteringGenes(genesListFolder)
     if (mode == "microarray"){
         h = hash()

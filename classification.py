@@ -14,6 +14,7 @@ def main(inFile, outDir, mode, cleaning, nbTopGenes, percentFilter, dataset, spl
     computeTestStats(os.path.join(outDir, "final_clusters.csv"), dataset, outDir)
     subprocess.call(f"Rscript {gitDir}/scripts/pathways.R -i {os.path.join(outDir, f'{dataset}_pval.csv')} -o {outDir}/ -t {threshold}", shell=True)
     annotClusters(f'{outDir}/final_clusters.csv', f'{outDir}/conclusion.csv', f'{outDir}/final_attribution.csv')
+    subprocess.call(f"rm -rf {outDir}/CACHE", shell = True)
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="-Launch affymetrix analysis")
