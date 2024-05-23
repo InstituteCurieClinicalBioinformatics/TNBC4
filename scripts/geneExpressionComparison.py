@@ -4,6 +4,7 @@ import pickle
 from statsmodels.stats.multitest import multipletests
 from argparse import ArgumentParser
 import os
+from collections import defaultdict
 
 def pval(clusterisedData, cluster, dataset):
     clusters = pd.read_csv(clusterisedData, delimiter=",", index_col = 0)
@@ -25,14 +26,24 @@ def addCorrection(dataset, clusterisedData, cluster):
     return clusterisedData
 
 def annotClusters(clusterisedData, conclusions, outFile):
-    clusterisedData["conclusion"] = clusterisedData["cluster"]
+    clusterisedData = pd.read_csv(clusterisedData, sep = ",", index_col = 0)
     conclusions = pd.read_csv(conclusions, sep = ",", index_col=0)
-    conclusion = conclusion["conclusion"].str.split("=", expand = True)
-    conclusion = dict(zip(conclusion[1], conclusion[0]))
-    for subtype in conclusion.keys():
-        if conclusion[conclusion["conclusion"] == subtype].shape[0] == 1:
-            clusterisedData["conclusion"] = clusterisedData["conclusion"].replace(subtype, conclusion[subtype])
-    clusterisedData.to_csv(outFile, sep = ",")
+    conclusion = conclusions["conclusion"].str.split("=", expand = True)
+    warningClassification(conclusion)
+    clusters = clusterisedData["cluster"].tolist()
+    conclusions = [", ".join(conclusion[conclusion[0] == str(cluster)][1].tolist()) for cluster in clusters]
+    clusterisedData["Conclusion"] = conclusions
+    clusterisedData["Samples"] = clusterisedData.index.tolist()
+    clusterisedData = clusterisedData[["Samples", "Conclusion", "cluster"]]
+    clusterisedData.to_csv(outFile, sep = ",", index = None)
+
+def warningClassification(conclusion):
+    warningDico = defaultdict(list)
+    for index, row in conclusion.iterrows():
+        warningDico[row[0]].append(row[1])
+    for key in warningDico.keys():
+        if len(warningDico[key]) != 1:
+            print(f"/!\ {', '.join(warningDico[key])} can't be determined. Both are cluster {key}")
 
 def computeTestStats(inFile, dataset, outDir):
     df = pd.read_csv(inFile, delimiter=",", index_col = 0)

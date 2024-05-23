@@ -10,6 +10,7 @@ library(affy)
 library(limma)
 library(stringr)
 library(rstatix)
+library(optparse)
 
 formateForGGplot <- function(samples, graph){
     sampleNames = c()
@@ -381,11 +382,8 @@ main <- function(inputFile, outDir, mode, nbSplit, genesListFolder){
         scaledData = read.table(inputFile, sep="\t", row.names=1, header=TRUE, check.names = FALSE)
     }
     res.km = clustering(scaledData, genes$Gene, outDir)
-
     expressionPlot(scaledData, genes, outDir, res.km)
 }
-
-main(scaledData, genes, "/home/kevin/TNBC", res.km)
 
 option_list = list(
 make_option(c("-g", "--geneFilesFolder"), type="character", help="Folder containing genes list files"),
