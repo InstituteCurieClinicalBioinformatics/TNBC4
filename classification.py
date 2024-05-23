@@ -16,7 +16,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="-Launch affymetrix analysis")
 
     parser.add_argument("-d", "--dataset", required=True, help="Dataset ID. Used to name output file.")
-    parser.add_argument("-g", "--genesListFolder", required = True, help = "Folder containing gene list for each subtype", default = os.path.join(os.path.dirname(os.path.realpath(__file__)), "genes"))
+    parser.add_argument("-g", "--genesListFolder", help = "Folder containing gene list for each subtype", default = os.path.join(os.path.dirname(os.path.realpath(__file__)), "genes"))
     parser.add_argument("-i", "--inputFile", required=True, help="Path to the input file.")
     parser.add_argument("-m", "--mode", required=True, help="Data type to cluster. Must be rnaseq or microarray", choices = ["rnaseq", "microarray"])
     parser.add_argument("-o", "--outDir", required=True, help="Path to the output folder.")
