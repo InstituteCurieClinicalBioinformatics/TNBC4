@@ -59,7 +59,13 @@ For an example of microarray input file, take a look at input_microarray.txt.
 
 ## RNA-Seq mode
 
-For RNA-Seq mode, input file must be a table with genes in row and samples ID in columns. Gene names are expected to be rownames in the table.
+For RNA-Seq mode, input file must be a table of TPM count with genes in row and samples ID in columns. Gene names are expected to be rownames in the table.
+Cleaning can be performed using -c option.
+Genes with more than 30% of 0 among all samples count will be removed and the top 1000 genes with the highest standard deviation across samples will be conserved.
+
+Those two parameters can be customed using -p and -n options.
+Cleaning can only be performed for RNA-Seq data.
+By default, cleaning is not performed.
 
 # Output files
 
